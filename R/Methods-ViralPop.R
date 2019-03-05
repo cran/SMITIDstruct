@@ -88,6 +88,10 @@ loadViralPop <- function(directory, listFiles, listCol = list("id"="id", "timeOb
 #' @export
 loadViralObs <- function(id, time, file) {
   if( is.numeric(as.numeric(time))) {time <- as.numeric(time)}
+  else{
+    if(is.StringDate(time)) time <- getTimestamp(time)
+    else warning("loadViralObs can't determine time format")
+  }
 
   obss <- readDNAStringSet(file)
   variants.nb <- length(obss)
@@ -143,6 +147,64 @@ concatViralPop <- function(lvpop, lid) {
     
     return(new("ViralPop", ID = paste(lid,collapse="_"), time = 0, size = sizeT, all.names, genotypes = all.set, proportions = all.prop))
 }
+
+#' createAViralPop
+#' @description Create a new ViralPop object
+#' @param host_id host ID which viral pop is observed
+#' @param obs_time time of the observation (numeric or date)
+#' @param seq a data.frame of sequences ID, sequences and counts
+#' @param id_seq column name containing the sequences ID
+#' @param seq_value column name containing the sequences
+#' @param prop column name containing the count of each sequences
+#' @param compact boolean, default FALSE, if TRUE will try group identicals sequences (not implemented yet)
+#' @export
+createAViralPop <- function(host_id, obs_time, seq, id_seq="seq_ID", seq_value="seq", prop = "prop", compact=FALSE) {
+    
+    host_id <- as.character(host_id)
+    if( !is.na(as.numeric(obs_time)) && is.numeric(as.numeric(obs_time))) {obs_time <- as.numeric(obs_time)}
+    else { obs_time <- getTimestamp(obs_time) }
+    proportions <- seq[[prop]]
+    nb_variants <- sum(proportions)
+    proportions <- seq[[prop]] / nb_variants
+    names <- lapply(seq[[id_seq]], function(ids){ ids })
+    names(names) <- seq[[id_seq]]
+    genotypes <- DNAStringSet(seq[[seq_value]])
+    names(genotypes) <- seq[[id_seq]]
+    
+    return(new("ViralPop", ID = host_id, time = obs_time, size = nb_variants, names, genotypes = genotypes, proportions = proportions))
+}
+
+#' loadViralPopSet
+#' @description load a list of viral populations
+#' @param lvpop a viralPopSet (default new one)
+#' @param list a list (see details)
+#' @details The list have to be on this format:  
+#' list$HOST_ID$TIME$list$seq_id
+#'                       $seq
+#'                       $prop
+#' A list indexed by host ID, follow by a list indexed by time (of observation).
+#' The last list contains an array of seq_ID (sequence ID), an array of seq (sequence as characters), and an array of the count of seq.
+#' example : 
+#' $'HOST_42'$'2014-01-01T00:00:00'$seq_ID ["SEQ_1","SEQ_2"]
+#' $'HOST_42'$'2014-01-01T00:00:00'$seq ["ACGT","TGCA"]
+#' $'HOST_42'$'2014-01-01T00:00:00'$seq_ID ["46","6"]
+#' @export
+loadViralPopSet <- function(lvpop=list(), list) {
+    
+    viralPopList <- list()
+    viralPop <- as.list(lapply(names(list),
+                               function(host){ 
+                                    viralPopList <<- append(viralPopList, as.list(lapply(names(list[[host]]), function(time){
+                                        createAViralPop(host, time, data.frame(list[[host]][[time]], stringsAsFactors = FALSE ))
+                                    })))
+    }))
+    
+    class(viralPopList) <- "ViralPopSet"
+    
+    return(unname(viralPopList))
+    
+}
+
 
 #' @title diversity.pDistance
 #' @description diversity calculation using Mean Pairwise Distance

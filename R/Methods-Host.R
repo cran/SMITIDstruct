@@ -90,13 +90,46 @@ addHost <- function(lhost, id) {
 #' class(lhost) <- "hostSet"
 #' lhost <- loadTree(lhost,paste(path,"/tree.txt",sep=''))
 #' @export
-loadTree <- function(lhost, file="tree.txt", source = "ID-source", receptor = "ID-receptor", tinf = "Tinf") {
+loadTree <- function(lhost = list(), file="tree.txt", source = "ID-source", receptor = "ID-receptor", tinf = "Tinf") {
   
   tree <- utils::read.table(file,header=TRUE, check.names=FALSE)
   
+  lhost <- loadTreeDF(lhost,tree,source,receptor,tinf)
+  return(lhost)
+  # apply(tree, 1, function(x) {
+  #   if( is.numeric(as.numeric(x[tinf])) ) time <- as.numeric(x[tinf])
+  #   else time <- as.numeric(as.POSIXct(x[tinf]))
+  #   
+  #   lhost <<- addHost(lhost, x[receptor])
+  #   lhost <<- addHost(lhost, x[source])
+  #   
+  #   indice <- which(names(lhost) == x[receptor])
+  #   if(length(indice) > 0) { lhost[[indice]]@sources[nrow(lhost[[indice]]@sources) +1,] <<- c("time" = time, 'id' = as.character(x[source])) }
+  #   
+  #   indice <- which(names(lhost) == x[source])
+  #   if(length(indice) > 0) { lhost[[indice]]@offsprings[nrow(lhost[[indice]]@offsprings) +1,] <<- c("time" = time, 'id' = as.character(x[receptor])) }
+  # })
+  # return(lhost)
+}
+
+#' loadTreeDF
+#' @description load sources and offsprings from file
+#' @param lhost a HostSet
+#' @param df a data.frame containing tree data
+#' @param source column name for source ID
+#' @param receptor column name for receptor ID
+#' @param tinf column name for infection Time
+#' @param weight epidemiological links probability
+#' @return the lhost param update with sources and offsprings
+# @examples
+#' @export
+loadTreeDF <- function(lhost = list(), df=data.frame(), source = "ID-source", receptor = "ID-receptor", tinf = "Tinf", weight = "weight") {
+  
+  tree <- df
+  
   apply(tree, 1, function(x) {
-    if( is.numeric(as.numeric(x[tinf])) ) time <- as.numeric(x[tinf])
-    else time <- as.numeric(as.POSIXct(x[tinf]))
+    if( !is.na(as.numeric(x[tinf])) && is.numeric(as.numeric(x[tinf])) ) time <- as.numeric(x[tinf])
+    else time <- getTimestamp(x[tinf])
     
     lhost <<- addHost(lhost, x[receptor])
     lhost <<- addHost(lhost, x[source])
@@ -131,9 +164,9 @@ loadTree <- function(lhost, file="tree.txt", source = "ID-source", receptor = "I
 addViralObs <- function(lhost, lvpop) {
   
   lapply(1:(length(lvpop)), function(x) {
-    
     indice <- which(names(lhost) == lvpop[[x]]@ID)
-    lhost[[indice]]@ID_V_POP[nrow(lhost[[indice]]@ID_V_POP)+1,] <<- c("time" = lvpop[[x]]@time, "id" = x)
+    if(length(indice) == 0 ) { warning("Can't find host with ID ",lvpop[[x]]@ID) }
+    else { lhost[[indice]]@ID_V_POP[nrow(lhost[[indice]]@ID_V_POP)+1,] <<- c("time" = lvpop[[x]]@time, "id" = x) }
     
   })
   return(lhost)
@@ -154,7 +187,9 @@ addViralObs <- function(lhost, lvpop) {
 #' @export
 loadCoords <- function(lhost, dfCoords, id="ID") {
         apply(dfCoords,1, FUN=function(l){
-            lhost[[as.character(l[id])]]@coordinates <<- rbind(lhost[[as.character(l[id])]]@coordinates, st_sf(geom=st_sfc(st_point(c(l["longitude"],l["latitude"], l["time"]), dim = "XYM"))))
+            if( !is.na(as.numeric(l["time"])) && is.numeric(as.numeric(l["time"])) ) time <- as.numeric(l["time"])
+            else time <- getTimestamp(l["time"])
+            lhost[[as.character(l[id])]]@coordinates <<- rbind(lhost[[as.character(l[id])]]@coordinates, st_sf(geom=st_sfc(st_point(c(l["longitude"],l["latitude"], time), dim = "XYM"))))
         })
     return(lhost)
 }
@@ -197,7 +232,13 @@ loadStates <- function(lhost, dfStates, id="ID", colStates) {
     #lsID = unique(dfStates[,id])
     
     for(s in colStates) {
-        apply(dfStates,1, FUN=function(l){ if(!is.na(l[s])) { lhost[[as.character(l[id])]]@states <<- rbind(lhost[[as.character(l[id])]]@states, data.frame(time=as.character(l[s]),value=as.character(s), stringsAsFactors = FALSE))}})
+        apply(dfStates,1, FUN=function(l){
+            if(!is.na(l[s])) {
+                if( !is.na(as.numeric(l[s])) && is.numeric(as.numeric(l[s])) ) time <- as.numeric(l[s])
+                else time <- getTimestamp(l[s])
+                lhost[[as.character(l[id])]]@states <<- rbind(lhost[[as.character(l[id])]]@states, data.frame(time=as.character(time),value=as.character(s), stringsAsFactors = FALSE))
+            }
+        })
     }
     
     return(lhost)
@@ -211,11 +252,15 @@ loadStates <- function(lhost, dfStates, id="ID", colStates) {
 #' @return the HostSet updated
 setStates <- function(lhost, dfStates, colStates=c( id="ID",time="time", states="value")) {
     
-    lsID = unique(dfStates$colSates$id)
+    #lsID = unique(dfStates$colSates$id)
     
-    for( hid in lsID) {
-        lhost[[as.character(hid)]]@status <- rbind(lhost[[as.character(hid)]]@status, dfStates$colStates$id[,c(colStates$time, colStates$states)])
-    }
+    #for( hid in lsID) {
+        #if( !is.na(as.numeric(dfStates$colStates$id[,colStates$time])) && is.numeric(as.numeric(dfStates$colStates$id[,colStates$time])) ) time <- as.numeric(dfStates$colStates$id[,colStates$time])
+        #else time <- getTimestamp(dfStates$colStates$id[,colStates$time])
+        # TODO modify TIME value in host states for timestamp
+        warning("setStates is deprecated")
+        #lhost[[as.character(hid)]]@status <- rbind(lhost[[as.character(hid)]]@status, dfStates$colStates$id[,c(colStates$time, colStates$states)])
+    #}
     
     return(lhost)
     
@@ -335,24 +380,24 @@ getTimeLine <- function(lhost, id) {
     tl <- data.frame("level"=character(),"label"=character(),"ID"=character(),"timestart"=character(),"timeend"=character(), stringsAsFactors = FALSE)
     
     # top
-    if( nrow(lhost[[id]]@sources) > 0 ) apply(lhost[[id]]@sources, MARGIN=1, FUN=function(l) {tl <<- rbind(tl, data.frame(level="top", label="Infected By", ID=l["id"], timestart=l["time"], timeend=NA))})
+    if( nrow(lhost[[id]]@sources) > 0 ) apply(lhost[[id]]@sources, MARGIN=1, FUN=function(l) {tl <<- rbind(tl, data.frame(level="top", label="Infected By", ID=l["id"], timestart=l["time"], timeend=NA,stringsAsFactors = FALSE))})
     
     # middle
-    if( nrow(lhost[[id]]@covariates) > 0 ) apply(lhost[[id]]@covariates, MARGIN=1, FUN=function(l) { if(!is.na(l["time"])) tl <<- rbind(tl, data.frame(level="middle", label=l["name"], ID=l["value"], timestart=l["time"], timeend=NA))})
+    if( nrow(lhost[[id]]@covariates) > 0 ) apply(lhost[[id]]@covariates, MARGIN=1, FUN=function(l) { if(!is.na(l["time"])) tl <<- rbind(tl, data.frame(level="middle", label=l["name"], ID=l["value"], timestart=l["time"], timeend=NA,stringsAsFactors = FALSE))})
     
     timeorder <- order(lhost[[id]]@states$time)
     for( s in seq_len(length(timeorder)) ) {
         if( s+1 <= length(timeorder)) timeend = lhost[[id]]@states[timeorder[s+1],"time"]
         else timeend = "Inf"
-        tl <- rbind(tl, data.frame(level="middle", label=lhost[[id]]@states[timeorder[s],"value"], ID=id, timestart=lhost[[id]]@states[timeorder[s],"time"], timeend=timeend))
+        tl <- rbind(tl, data.frame(level="middle", label=lhost[[id]]@states[timeorder[s],"value"], ID=id, timestart=lhost[[id]]@states[timeorder[s],"time"], timeend=as.character(timeend),stringsAsFactors = FALSE))
     }
     
     #Obs
 
-    if( nrow(lhost[[id]]@ID_V_POP) > 0 ){ apply(lhost[[id]]@ID_V_POP, MARGIN=1, FUN=function(l) {tl <<- rbind(tl, data.frame(level="middle", label="Obs", ID=l["id"], timestart=l["time"], timeend=NA))}) }
+    if( nrow(lhost[[id]]@ID_V_POP) > 0 ){ apply(lhost[[id]]@ID_V_POP, MARGIN=1, FUN=function(l) {tl <<- rbind(tl, data.frame(level="middle", label="Obs", ID=l["id"], timestart=l["time"], timeend=NA,stringsAsFactors = FALSE))}) }
     
     # bottom
-    if( nrow(lhost[[id]]@offsprings) > 0 ){ apply(lhost[[id]]@offsprings, MARGIN=1, FUN=function(l) {tl <<- rbind(tl, data.frame(level="bottom", label="Offspring", ID=l["id"], timestart=l["time"], timeend=NA))}) }
+    if( nrow(lhost[[id]]@offsprings) > 0 ){ apply(lhost[[id]]@offsprings, MARGIN=1, FUN=function(l) {tl <<- rbind(tl, data.frame(level="bottom", label="Offspring", ID=l["id"], timestart=l["time"], timeend=NA,stringsAsFactors = FALSE))}) }
     
     return(tl)
 }
@@ -366,7 +411,7 @@ getTimeLine <- function(lhost, id) {
 getDiversity.pDistance <- function(host, lvpop) {
     if(is.null(host) || is.null(lvpop) || length(host) == 0 || length(lvpop) == 0) return(data.frame())
     df <- data.frame(time = character(), p_distance=numeric, stringsAsFactors = FALSE)
-    df <- rbind(df,data.frame(time = host@ID_V_POP$time, p_distance = sapply(host@ID_V_POP$id, FUN = function(x){ return( diversity.pDistance(lvpop[[as.numeric(x)]]))})))
+    df <- rbind(df,data.frame(time = as.numeric(host@ID_V_POP$time), p_distance = sapply(host@ID_V_POP$id, FUN = function(x){ return( diversity.pDistance(lvpop[[as.numeric(x)]]))}),stringsAsFactors = FALSE))
     return(df)
     
 }

@@ -36,7 +36,7 @@ createIndex <- function(hostlist) {
   colnames(df) <- c("TIME","ID_HOST", "EVENTCODE")
   
   for(hid in 1:length(hostlist)) {
-    print(hostlist[[hid]]@coordinates)
+    #print(hostlist[[hid]]@coordinates)
     apply(st_coordinates(hostlist[[hid]]@coordinates),1, function(x){df <<- addIndex(df,hid,x["M"],CODE_MOVE)})
     lapply(hostlist[[hid]]@states$time, function(x){ df <<- addIndex(df,hid,x,CODE_STATES)})
     lapply(hostlist[[hid]]@sources$time, function(x){ df <<- addIndex(df,hid,x,CODE_SOURCES)})

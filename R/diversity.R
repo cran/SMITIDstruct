@@ -27,6 +27,8 @@ plotDiversity.pDistance <- function(host, lvpop){
     host_pD <- getDiversity.pDistance(host, lvpop)
     
     if(nrow(host_pD) > 0) {
+        if( is.timestamp(host_pD$time[1]) ) host_pD$time <- getDate(host_pD$time)
+
         ggplot(host_pD, environment=environment(),mapping = aes_string(x='time', y='p_distance', group='1')) +
             geom_point(color= "blue") +
             geom_line(color="steelblue") + 
@@ -48,11 +50,12 @@ plotDiversity.sfs <- function(host, lvpop) {
         toplot <- data.frame(Times=numeric(), Freq=numeric(), time=character(),stringsAsFactors = FALSE)
     
         for( i in 1:length(host_sfs)) {
-          df <- data.frame(table(host_sfs[[i]]))
+          df <- data.frame(table(host_sfs[[i]]), stringsAsFactors = FALSE)
           colnames(df) <- c("Times","Freq")
-          toplot <- rbind(toplot,cbind(df,time=rep(names(host_sfs[i]),nrow(df))))
+          #toplot <- rbind(toplot,cbind(df,time=rep(names(host_sfs[i]),nrow(df))))
+          toplot <- rbind(toplot,data.frame(df,time=rep(names(host_sfs[i]),nrow(df)), stringsAsFactors=FALSE))
         }
-    
+        if( is.timestamp(as.numeric(toplot$time[1])) ) toplot$time <- getDate(as.numeric(toplot$time))
     
         ggplot(data=toplot, aes_string(x='Times', y='Freq')) +
             geom_bar(stat="identity", fill="steelblue") + 
