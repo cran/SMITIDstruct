@@ -15,8 +15,8 @@ Statistical Methods for Inferring Transmissions of Infectious Diseases from deep
 \tabular{ll}{
          Package: \tab SMITIDstruct\cr
          Type: \tab Package\cr
-         Version: \tab 0.0.4\cr
-         Date: \tab 2019-02-28\cr
+         Version: \tab 0.0.5\cr
+         Date: \tab 2019-06-14\cr
          License: \tab GPL (>=2)\cr
          }
 

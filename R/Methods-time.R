@@ -44,8 +44,9 @@ is.juliendate <- function(time) {
 #' @return TRUE if date contains date format
 #' @export
 is.StringDate <- function(date) {
-    if( any(is.na(as.numeric(date))) ) { return(TRUE) }
-    else return(FALSE)
+    #if( any(is.na(as.numeric(date))) ) { return(TRUE) }
+    if( all(grepl("^[0-9]+$",as.character(date))) ) return(FALSE)
+    else return(TRUE)
 }
 
 #' getDate

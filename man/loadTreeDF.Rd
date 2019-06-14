@@ -5,7 +5,7 @@
 \title{loadTreeDF}
 \usage{
 loadTreeDF(lhost = list(), df = data.frame(), source = "ID-source",
-  receptor = "ID-receptor", tinf = "Tinf", weight = "weight")
+  receptor = "ID-receptor", tinf = "Tinf", weight = "Weight")
 }
 \arguments{
 \item{lhost}{a HostSet}
@@ -18,11 +18,11 @@ loadTreeDF(lhost = list(), df = data.frame(), source = "ID-source",
 
 \item{tinf}{column name for infection Time}
 
-\item{weight}{epidemiological links probability}
+\item{weight}{infection links probability}
 }
 \value{
 the lhost param update with sources and offsprings
 }
 \description{
-load sources and offsprings from file
+load sources and offsprings from a data.frame
 }

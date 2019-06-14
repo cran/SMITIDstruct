@@ -3,8 +3,8 @@ Type: Package
 Encoding: UTF-8
 Title: Data Structure and Manipulations Tool for Host and Viral
         Population
-Version: 0.0.4
-Date: 2019-03-05
+Version: 0.0.5
+Date: 2019-06-14
 Authors@R: c(person("Jean-Francois", "Rey", role = c("aut", "cre"), email = "jean-francois.rey@inra.fr"))
 Author: Jean-Francois Rey [aut, cre]
 Maintainer: Jean-Francois Rey <jean-francois.rey@inra.fr>
@@ -28,7 +28,7 @@ Suggests: testthat (>= 2.0)
 Collate: 'Class-Host.R' 'Class-ViralPop.R' 'Methods-Host.R'
         'Methods-ViralPop.R' 'Methods-time.R' 'SMITIDstruct.R' 'demo.R'
         'diversity.R' 'index.R'
-RoxygenNote: 6.1.0
-Packaged: 2019-03-05 10:27:57 UTC; jfrey
+RoxygenNote: 6.1.1
+Packaged: 2019-06-14 10:05:06 UTC; jfrey
 Repository: CRAN
-Date/Publication: 2019-03-05 13:20:03 UTC
+Date/Publication: 2019-06-14 11:30:11 UTC

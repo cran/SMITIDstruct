@@ -37,7 +37,7 @@ createIndex <- function(hostlist) {
   
   for(hid in 1:length(hostlist)) {
     #print(hostlist[[hid]]@coordinates)
-    apply(st_coordinates(hostlist[[hid]]@coordinates),1, function(x){df <<- addIndex(df,hid,x["M"],CODE_MOVE)})
+    if(nrow(st_coordinates(hostlist[[hid]]@coordinates)) > 0) apply(st_coordinates(hostlist[[hid]]@coordinates),1, function(x){df <<- addIndex(df,hid,x[["M"]],CODE_MOVE)})
     lapply(hostlist[[hid]]@states$time, function(x){ df <<- addIndex(df,hid,x,CODE_STATES)})
     lapply(hostlist[[hid]]@sources$time, function(x){ df <<- addIndex(df,hid,x,CODE_SOURCES)})
     lapply(hostlist[[hid]]@offsprings$time, function(x){ df <<- addIndex(df,hid,x,CODE_OFFSPRINGS)})
@@ -57,9 +57,9 @@ createIndex <- function(hostlist) {
 addIndex <- function(index, id_host, time, code) {
   
   ev <- index[which(index$TIME == time & index$ID_HOST == id_host),]
-  
+
   if(!is.null(ev) & nrow(ev) != 0) {
-    newcode <- addcode(code,ev$EVENTCODE)
+    newcode <- addcode(ev$EVENTCODE, code)
     index[ which(index$TIME == time & index$ID_HOST == id_host),]$EVENTCODE <- newcode 
   }
   else {
@@ -96,4 +96,56 @@ mergeCode <- function(listcode) {
     newcode <- addcode(newcode,listcode[i])
   }
   return(newcode)
+}
+
+#' isInCode
+#' @description check a code contains a specific code
+#' @param code list of code to test
+#' @param thecode the real code
+#' @return TRUE if code contain thecode otherwise FLASE
+#' @export
+isInCode <- function(code, thecode) {
+    pos <- regexpr("1",thecode)
+ 
+    return(sapply(code, FUN= function(x) { return(nchar(x) == nchar(thecode) && substr(x,pos,pos) == "1") } )) 
+}
+
+#' getInfosByHostAndTime
+#' @description get hosts informations, status, infectedby, coordinates and time
+#' @param index an index
+#' @param lhost a hosts list
+#' @return a data.frame with colnames (id, time, infectedby, status, probabilities, X ,Y)
+#' @export
+getInfosByHostAndTime <- function(index, lhost) {
+    
+    filterIndex <- index[ which(isInCode(index$EVENTCODE, CODE_MOVE) | isInCode(index$EVENTCODE, CODE_STATES) | isInCode(index$EVENTCODE, CODE_SOURCES) ), ]
+    
+    all <- data.frame("id"=character(), "time"=character(), "status"=character(), "infectedby"=character(), "probabilities"=character(), "X"=numeric(), "Y"=numeric() , stringsAsFactors=FALSE)
+    
+    lapply(1:nrow(filterIndex), FUN = function(i){
+                        indice <- as.numeric(filterIndex[i,"ID_HOST"])
+                        host <- lhost[[indice]]@ID
+                        time <- filterIndex[i, "TIME"]
+                        states <- "" 
+                        coord.X <- NA
+                        coord.Y <- NA
+                        sources <- ""
+                        sourcesProb <- ""
+
+                        if( isInCode(filterIndex[i, "EVENTCODE"], CODE_MOVE) ) {
+                            mc <- as.data.frame(st_coordinates(lhost[[indice]]@coordinates))
+                            coord.X <- mc[which(mc$M == as.numeric(time)), c("X")]
+                            coord.Y <- mc[which(mc$M == as.numeric(time)), c("Y")]
+                        } 
+                        if( isInCode(filterIndex[i, "EVENTCODE"], CODE_STATES) ) {
+                            states <- lhost[[indice]]@states[which(lhost[[indice]]@states$time == time), "value"]
+                        }
+                        if( isInCode(filterIndex[i, "EVENTCODE"], CODE_SOURCES) ){
+                            sources <- lhost[[indice]]@sources[which(lhost[[indice]]@sources$time == time), "id"]
+                            sourcesProb <- lhost[[indice]]@sources[which(lhost[[indice]]@sources$time == time), "prob"]
+                        }
+                        
+                        all <<- rbind(all, data.frame("id"=host, "time"=time, "status"=states, "infectedby"=paste(sources,sep=","), "probabilities"=paste(sourcesProb,sep=","), "X"=coord.X, "Y"=coord.Y, stringsAsFactors = FALSE ))
+    })
+    return(all)
 }

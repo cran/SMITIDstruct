@@ -5,7 +5,7 @@
 \title{loadTree}
 \usage{
 loadTree(lhost = list(), file = "tree.txt", source = "ID-source",
-  receptor = "ID-receptor", tinf = "Tinf")
+  receptor = "ID-receptor", tinf = "Tinf", weight = "Weight")
 }
 \arguments{
 \item{lhost}{a HostSet}
@@ -17,6 +17,8 @@ loadTree(lhost = list(), file = "tree.txt", source = "ID-source",
 \item{receptor}{column name for receptor ID}
 
 \item{tinf}{column name for infection Time}
+
+\item{weight}{column name of infection weight}
 }
 \value{
 the lhost param update with sources and offsprings

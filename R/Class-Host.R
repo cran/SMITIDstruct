@@ -58,8 +58,8 @@ setMethod("initialize", "Host",
             #if(missing(coordinates)) {.Object@coordinates <- SpatialPointsDataFrame(list(0,0),data.frame(list(time=0)))}
             if(missing(coordinates)) {.Object@coordinates <- st_sf(st_sfc())}
             if(missing(states)){ .Object@states <- data.frame(time=character(), value=character(), stringsAsFactors = FALSE)}
-            if(missing(sources)){ .Object@sources <- stats::setNames(data.frame(matrix(ncol=2,nrow=0)),c("time","id"))}
-            if(missing(offsprings)){ .Object@offsprings <- stats::setNames(data.frame(matrix(ncol=2,nrow=0)),c("time","id"))}
+            if(missing(sources)){ .Object@sources <- stats::setNames(data.frame(matrix(ncol=3,nrow=0)),c("time","id","prob"))}
+            if(missing(offsprings)){ .Object@offsprings <- stats::setNames(data.frame(matrix(ncol=3,nrow=0)),c("time","id","prob"))}
             if(missing(ID_V_POP)){ .Object@ID_V_POP <- data.frame(time=character(), id=character(), stringsAsFactors = FALSE)} #stats::setNames(data.frame(matrix(ncol=2,nrow=0)),c("time","id"))}
             if(missing(covariates)){ .Object@covariates <- data.frame(time=character(), name=character(), value=character(), stringsAsFactors = FALSE)}
             
